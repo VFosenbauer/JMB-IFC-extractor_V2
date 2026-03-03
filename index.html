@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IFC Materiály Extractor</title>
+    <meta name="description"
+        content="Profesionální nástroj pro extrakci materiálů, rozměrů a místností z IFC souborů pro stavebníky" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet" />
+  <script type="module" crossorigin src="./assets/index-C8oC8Kfd.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-C8VzOzK4.css">
+</head>
+
+<body>
+    <!-- Password Gate -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-card">
+            <div class="auth-lang-toggle" id="langToggle">
+                <button class="lang-btn active" data-lang="cs" title="Čeština">🇨🇿 CZ</button>
+                <button class="lang-btn" data-lang="de" title="Deutsch">🇩🇪 DE</button>
+            </div>
+            <div class="auth-logo">
+                <i class="ri-shield-keyhole-line"></i>
+            </div>
+            <h2 class="auth-title" data-i18n="auth.title">IFC Materiály Extractor</h2>
+            <p class="auth-subtitle" data-i18n="auth.subtitle">Zadejte přístupové heslo pro pokračování</p>
+            <form id="authForm" class="auth-form">
+                <div class="auth-input-group">
+                    <i class="ri-lock-line"></i>
+                    <input type="password" id="authPassword" data-i18n-placeholder="auth.placeholder"
+                        placeholder="Heslo" autocomplete="current-password" />
+                </div>
+                <button type="submit" class="auth-btn" data-i18n="auth.login">
+                    <i class="ri-login-box-line"></i> Přihlásit se
+                </button>
+                <p class="auth-error" id="authError" style="display:none" data-i18n="auth.error">
+                    <i class="ri-error-warning-line"></i> Nesprávné heslo
+                </p>
+            </form>
+            <p class="auth-hint" data-i18n="auth.hint">Interní nástroj Jaeger Modulbau</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo-group">
+                <img src="./logo.png" alt="Jaeger Modulbau" class="app-logo" id="appLogo"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                <div class="logo-icon logo-fallback" style="display: none;">
+                    <i class="ri-building-4-line"></i>
+                </div>
+                <div class="header-titles">
+                    <h1 class="app-title" data-i18n="header.title">IFC Materiály Extractor</h1>
+                    <p class="app-subtitle" data-i18n="header.subtitle">Profesionální extrakce dat z BIM modelů</p>
+                </div>
+            </div>
+            <div class="header-tools">
+                <div class="header-stats" id="headerStats" style="display:none">
+                    <div class="stat-chip">
+                        <i class="ri-file-3-line"></i>
+                        <span id="statFileName">—</span>
+                    </div>
+                    <div class="stat-chip">
+                        <i class="ri-stack-line"></i>
+                        <span id="statElements">0 prvků</span>
+                    </div>
+                    <div class="stat-chip">
+                        <i class="ri-palette-line"></i>
+                        <span id="statMaterials">0 materiálů</span>
+                    </div>
+                </div>
+                <div class="header-toggles">
+                    <button class="theme-toggle-btn" id="themeToggle" title="Přepnout motiv">
+                        <i class="ri-sun-line theme-icon-light" style="display: none;"></i>
+                        <i class="ri-moon-line theme-icon-dark"></i>
+                    </button>
+                    <div class="header-lang-switcher" id="headerLangToggle">
+                        <button class="lang-btn-sm active" data-lang="cs">CZ</button>
+                        <button class="lang-btn-sm" data-lang="de">DE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Upload Section -->
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon-wrapper">
+                    <div class="upload-icon-bg"></div>
+                    <i class="ri-upload-cloud-2-line upload-icon"></i>
+                </div>
+                <h2 class="upload-title" data-i18n="upload.title">Přetáhněte IFC soubor sem</h2>
+                <p class="upload-desc" data-i18n="upload.desc">nebo klikněte pro výběr souboru</p>
+                <p class="upload-hint" data-i18n="upload.hint">Podporované formáty: .ifc • Max velikost: 500 MB</p>
+                <input type="file" id="fileInput" accept=".ifc" hidden />
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-section" id="progressSection" style="display:none">
+                <div class="progress-header">
+                    <span class="progress-label" id="progressLabel" data-i18n="upload.loading">Načítání
+                        souboru...</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBar"></div>
+                </div>
+                <p class="progress-detail" id="progressDetail" data-i18n="upload.parser">Připravuji parser...</p>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display:none">
+            <!-- Tab Navigation -->
+            <nav class="tab-nav">
+                <button class="tab-btn active" data-tab="table" data-i18n="tab.table">
+                    <i class="ri-table-line"></i> Tabulka
+                </button>
+                <button class="tab-btn" data-tab="quality" data-i18n="tab.quality">
+                    <i class="ri-shield-check-line"></i> Kontrola
+                </button>
+                <button class="tab-btn" data-tab="compare" data-i18n="tab.compare">
+                    <i class="ri-git-merge-line"></i> Porovnání
+                </button>
+                <button class="tab-btn" data-tab="viewer3d" data-i18n="tab.viewer3d">
+                    <i class="ri-box-3-line"></i> 3D Model
+                </button>
+                <button class="tab-btn" data-tab="heatmap" data-i18n="tab.heatmap">
+                    <i class="ri-fire-line"></i> Heatmap
+                </button>
+                <button class="tab-btn" data-tab="export" data-i18n="tab.export">
+                    <i class="ri-download-2-line"></i> Export
+                </button>
+            </nav>
+
+            <!-- Table Tab -->
+            <div class="tab-content active" id="tab-table">
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <i class="ri-search-line"></i>
+                        <input type="text" id="searchInput" data-i18n-placeholder="filter.search"
+                            placeholder="Hledat kód XX-XX-XX-XX, materiál, typ..." />
+                    </div>
+                    <div class="filter-group">
+                        <select id="filterType" class="filter-select">
+                            <option value="">Všechny typy</option>
+                        </select>
+                        <select id="filterMaterial" class="filter-select">
+                            <option value="">Všechny materiály</option>
+                        </select>
+                        <select id="filterStorey" class="filter-select">
+                            <option value="">Všechna podlaží</option>
+                        </select>
+                        <select id="filterModule" class="filter-select">
+                            <option value="">Všechny moduly</option>
+                        </select>
+                        <select id="filterCategory" class="filter-select">
+                            <option value="">Všechny kategorie</option>
+                        </select>
+                        <select id="filterLiefer" class="filter-select">
+                            <option value="">Všechny kódy</option>
+                        </select>
+                        <select id="filterSurface" class="filter-select">
+                            <option value="">Všechny pohledy</option>
+                        </select>
+                        <select id="filterThickness" class="filter-select">
+                            <option value="">Všechny tloušťky</option>
+                        </select>
+                    </div>
+                    <div class="table-info">
+                        <span id="tableCount">0 záznamů</span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table" id="dataTable">
+                        <thead>
+                            <tr>
+                                <th data-sort="lieferbezeichnung" style="white-space:nowrap" data-i18n="th.code">Kód <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="haus" data-i18n="th.haus">Haus <i class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="modulNr" data-i18n="th.modul">Modul <i class="ri-arrow-up-down-line"></i>
+                                </th>
+                                <th data-sort="bauteilart" data-i18n="th.bart">BArt <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="bauteilNr" data-i18n="th.bnr">BNr <i class="ri-arrow-up-down-line"></i>
+                                </th>
+                                <th data-sort="material" data-i18n="th.material">Materiál <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="materialType" data-i18n="th.matType">Mat. typ <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="surfaceQuality" data-i18n="th.surface">Pohledovost <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="storey" data-i18n="th.storey">Podlaží <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="dimWidth" data-i18n="th.width">Šířka <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="dimLength" data-i18n="th.length">Délka <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="dimThickness" data-i18n="th.thickness">Výška/tl. <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="area" data-i18n="th.area">Plocha m² <i class="ri-arrow-up-down-line"></i>
+                                </th>
+                                <th data-sort="volume" data-i18n="th.volume">Objem m³ <i
+                                        class="ri-arrow-up-down-line"></i></th>
+                                <th data-sort="price" data-i18n="th.price">Cena € <i class="ri-arrow-up-down-line"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+
+            <!-- Compare Tab -->
+            <!-- Quality Check Tab -->
+            <div class="tab-content" id="tab-quality">
+                <div class="quality-check-wrapper" id="qualityCheckContent">
+                    <div class="qc-empty" style="text-align:center; padding:60px; color:var(--text-muted)">
+                        <i class="ri-shield-check-line" style="font-size:48px; display:block; margin-bottom:12px"></i>
+                        <span data-i18n="qc.uploadPrompt">Nahrajte IFC soubor pro spuštění kontrol kvality</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compare Tab -->
+            <div class="tab-content" id="tab-compare">
+                <div class="compare-section">
+                    <div class="compare-upload-grid">
+                        <div class="compare-upload-box" id="compareUploadA">
+                            <div class="compare-file-label" data-i18n="compare.fileA">Soubor A (referenční)</div>
+                            <div class="compare-dropzone" id="compareDropA">
+                                <i class="ri-file-upload-line"></i>
+                                <span data-i18n="compare.dropA">Přetáhněte IFC soubor A</span>
+                                <input type="file" id="compareFileA" accept=".ifc" hidden />
+                            </div>
+                            <div class="compare-file-info" id="compareInfoA"></div>
+                        </div>
+                        <div class="compare-vs">VS</div>
+                        <div class="compare-upload-box" id="compareUploadB">
+                            <div class="compare-file-label" data-i18n="compare.fileB">Soubor B (porovnávaný)</div>
+                            <div class="compare-dropzone" id="compareDropB">
+                                <i class="ri-file-upload-line"></i>
+                                <span data-i18n="compare.dropB">Přetáhněte IFC soubor B</span>
+                                <input type="file" id="compareFileB" accept=".ifc" hidden />
+                            </div>
+                            <div class="compare-file-info" id="compareInfoB"></div>
+                        </div>
+                    </div>
+                    <div class="compare-actions" id="compareActions" style="display:none">
+                        <button class="export-btn excel-btn" id="btnRunCompare">
+                            <i class="ri-git-merge-line"></i> <span data-i18n="compare.run">Spustit porovnání</span>
+                        </button>
+                    </div>
+                    <div class="compare-progress" id="compareProgress" style="display:none">
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="compareProgressBar"></div>
+                        </div>
+                        <p class="progress-detail" id="compareProgressLabel">Načítám...</p>
+                    </div>
+                    <div class="compare-results" id="compareResults" style="display:none">
+                        <div class="compare-summary" id="compareSummary"></div>
+                        <div class="table-toolbar compare-toolbar">
+                            <div class="search-box">
+                                <i class="ri-search-line"></i>
+                                <input type="text" id="compareSearch" placeholder="Hledat kód, název, materiál..." />
+                            </div>
+                            <div class="filter-group">
+                                <select id="compareFilterStatus" class="filter-select">
+                                    <option value="">Všechny stavy</option>
+                                    <option value="match">✅ Shoda</option>
+                                    <option value="diff">⚠️ Rozdíly</option>
+                                    <option value="only-a">❌ Jen v A</option>
+                                    <option value="only-b">❌ Jen v B</option>
+                                </select>
+                                <select id="compareFilterCategory" class="filter-select">
+                                    <option value="">Všechny kategorie</option>
+                                </select>
+                                <select id="compareFilterSurface" class="filter-select">
+                                    <option value="">Všechny pohledy</option>
+                                </select>
+                                <select id="compareFilterMaterial" class="filter-select">
+                                    <option value="">Všechny materiály</option>
+                                </select>
+                            </div>
+                            <div class="table-info">
+                                <span id="compareCount">0 záznamů</span>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table" id="compareTable">
+                                <thead>
+                                    <tr>
+                                        <th>Kód</th>
+                                        <th>Stav</th>
+                                        <th>Název A</th>
+                                        <th>Název B</th>
+                                        <th>Rozměry A</th>
+                                        <th>Rozměry B</th>
+                                        <th>Pohled A</th>
+                                        <th>Pohled B</th>
+                                        <th>Materiál A</th>
+                                        <th>Materiál B</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compareTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="compare-export-actions">
+                            <button class="export-btn excel-btn" id="btnExportCompare">
+                                <i class="ri-file-excel-2-line"></i> <span data-i18n="compare.exportExcel">Exportovat
+                                    porovnání do Excelu</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3D Viewer Tab -->
+            <div class="tab-content" id="tab-viewer3d">
+                <div class="viewer-toolbar">
+                    <button class="toolbar-btn" id="btnResetView" data-i18n-title="viewer.reset">
+                        <i class="ri-refresh-line"></i> <span data-i18n="viewer.reset">Reset</span>
+                    </button>
+                    <button class="toolbar-btn" id="btnWireframe" data-i18n-title="viewer.wireframe">
+                        <i class="ri-grid-line"></i> <span data-i18n="viewer.wireframe">Drátový model</span>
+                    </button>
+                    <div class="viewer-legend" id="viewerLegend"></div>
+                </div>
+                <div class="viewer-container" id="viewerContainer">
+                    <div class="viewer-loading" id="viewerLoading">
+                        <i class="ri-loader-4-line spin"></i>
+                        <span data-i18n="viewer.loading">Generuji 3D model...</span>
+                    </div>
+                    <canvas id="viewer3dCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Heatmap Tab -->
+            <div class="tab-content" id="tab-heatmap">
+                <div class="heatmap-grid">
+                    <div class="heatmap-chart-section">
+                        <h3><i class="ri-bar-chart-grouped-line"></i> <span data-i18n="heatmap.matDist">Rozložení
+                                materiálů</span></h3>
+                        <div class="heatmap-bars" id="heatmapBars"></div>
+                    </div>
+                    <div class="price-section">
+                        <h3><i class="ri-money-euro-circle-line"></i> <span data-i18n="heatmap.priceEst">Cenový odhad
+                                dle Bauteilart (+ 10% rezerva)</span></h3>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px"
+                            data-i18n="heatmap.priceNote">
+                            BSP panely (BArt 10/20/30) = €/m² | BSH prvky (BArt 40/50) = €/m³
+                        </p>
+                        <div class="price-table-wrapper">
+                            <table class="price-table" id="priceTable">
+                                <thead>
+                                    <tr>
+                                        <th>Bauteilart</th>
+                                        <th style="text-align:right">Množství</th>
+                                        <th>Jednotka</th>
+                                        <th>Cena/j. (€)</th>
+                                        <th style="text-align:right">Celkem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="priceBody"></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4"><strong data-i18n="heatmap.grandTotal">Celkem (vč. 10%
+                                                rezervy)</strong></td>
+                                        <td id="priceTotal" style="text-align:right"><strong>0 €</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div class="tab-content" id="tab-export">
+                <div class="export-grid">
+                    <div class="export-card" id="exportExcel">
+                        <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+                        <h3 data-i18n="export.excelTitle">Excel (.xlsx)</h3>
+                        <p data-i18n="export.excelDesc">Kompletní tabulka s formátováním a filtry</p>
+                        <button class="export-btn excel-btn" data-i18n="export.excelBtn">
+                            <i class="ri-download-line"></i> Stáhnout Excel
+                        </button>
+                    </div>
+                    <div class="export-card" id="exportPdf">
+                        <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+                        <h3 data-i18n="export.pdfTitle">PDF Report</h3>
+                        <p data-i18n="export.pdfDesc">Profesionální report se souhrnem a tabulkou</p>
+                        <button class="export-btn pdf-btn" data-i18n="export.pdfBtn">
+                            <i class="ri-download-line"></i> Stáhnout PDF
+                        </button>
+                    </div>
+                    <div class="export-card" id="exportCsv">
+                        <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+                        <h3 data-i18n="export.csvTitle">CSV</h3>
+                        <p data-i18n="export.csvDesc">Jednoduchý textový formát pro další zpracování</p>
+                        <button class="export-btn csv-btn" data-i18n="export.csvBtn">
+                            <i class="ri-download-line"></i> Stáhnout CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-content-inner">
+            <p data-i18n="footer">IFC Materiály Extractor v1.0 • Offline nástroj pro stavebníky • © 2026</p>
+            <p class="footer-author" data-i18n="footer.author">tuto aplikaci Vít Fošenbauer</p>
+        </div>
+    </footer>
+
+    <!-- New File Button (persistent) -->
+    <button class="fab-new" id="fabNew" style="display:none" data-i18n-title="fab.newFile">
+        <i class="ri-add-line"></i>
+    </button>
+
+</body>
+
+</html>
